@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ChronosCheck Pro — Akademik Zaman Planlayıcı & PWA</title>
+  <title>ChronosCheck Pro — Akademik Zaman Planlayıcı & Süreli Sınav Stüdyosu</title>
   
   <!-- PWA Manifest & Meta -->
   <link rel="manifest" href="manifest.json">
@@ -70,7 +70,7 @@
               <h1 class="text-sm sm:text-base font-bold tracking-tight text-white">ChronosCheck <span class="text-indigo-400">Pro</span></h1>
               <span id="streakBadge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/35">🔥 Seri</span>
             </div>
-            <p class="text-[11px] text-slate-400 hidden sm:block">Akademik Zaman Planlayıcı & Anki Stüdyosu</p>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Akademik Zaman Planlayıcı & Süreli Sınav Stüdyosu</p>
           </div>
         </div>
 
@@ -174,8 +174,8 @@
         <button onclick="switchMainView('anki')" id="viewBtn-anki" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
           🗂️ Anki Stüdyosu
         </button>
-        <button onclick="switchMainView('analytics')" id="viewBtn-analytics" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
-          📈 Analitik
+        <button onclick="switchMainView('quiz')" id="viewBtn-quiz" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+          📝 Süreli Sınav Stüdyosu
         </button>
       </div>
 
@@ -346,15 +346,53 @@
       </div>
     </div>
 
-    <!-- GÖRÜNÜM 3: ANALİTİK -->
-    <div id="view-analytics" class="hidden grid-cols-1 lg:grid-cols-12 gap-5">
-      <div class="lg:col-span-6 glass-card rounded-2xl p-5 border border-slate-800">
-        <h3 class="text-sm font-bold text-white mb-3">📊 Kategori Dağılımı</h3>
-        <div id="categoryBreakdown" class="space-y-3"></div>
+    <!-- GÖRÜNÜM 3: SÜRELİ SINAV STÜDYOSU (JSON DESTEKLİ) -->
+    <div id="view-quiz" class="hidden grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div class="lg:col-span-4 glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+        <h2 class="text-sm font-bold text-white">📝 Sınav Ayarları & JSON Yükle</h2>
+        <p class="text-xs text-slate-400">JSON formatındaki soru bankanızı yükleyin[cite: 4], soru sayısını ve sınav süresini belirleyerek testi başlatın.</p>
+        
+        <div>
+          <label class="block text-xs text-slate-300 mb-1">JSON Dosyası Seç (.json)</label>
+          <input type="file" id="jsonFileInput" accept=".json" onchange="loadJsonFileFromFile(event)"
+            class="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white cursor-pointer">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-300 mb-1">Veya JSON Metnini Yapıştır</label>
+          <textarea id="jsonQuizInput" rows="4" placeholder='[{"soru_metni": "...", "secenek_a": "...", "dogru_cevap": "C"}]'
+            class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-slate-200 focus:outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">Soru Sayısı</label>
+            <select id="quizQuestionCount" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white">
+              <option value="5">5 Soru</option>
+              <option value="10" selected>10 Soru</option>
+              <option value="20">20 Soru</option>
+              <option value="all">Tümünü Çöz</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">Süre (Dakika)</label>
+            <input id="quizDurationMinutes" type="number" min="1" max="120" value="10"
+              class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-white">
+          </div>
+        </div>
+
+        <button onclick="startTimedQuizSession()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg">
+          🚀 Süreli Sınavı Başlat
+        </button>
       </div>
-      <div class="lg:col-span-6 glass-card rounded-2xl p-5 border border-slate-800">
-        <h3 class="text-sm font-bold text-white mb-3">🗓️ Haftalık Isı Haritası</h3>
-        <div id="weeklyHeatmap" class="grid grid-cols-7 gap-2 pt-2"></div>
+
+      <div class="lg:col-span-8 glass-card rounded-2xl p-5 border border-slate-800">
+        <div id="quizContainer">
+          <div class="text-center py-12 text-slate-400">
+            <span class="text-3xl block mb-2">📝</span>
+            <p class="text-sm font-medium">Sınavı başlatmak için soldan ayarları yapıp "Süreli Sınavı Başlat" butonuna basın.</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -459,8 +497,9 @@
     let audioCtx = null;
     let ambientNode = null;
     let deferredPrompt = null;
+    let activeQuiz = null;
+    let quizTimerInterval = null;
 
-    // Service Worker Kaydı (PWA için şart)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(err => console.log('SW kayıt hatası:', err));
@@ -514,11 +553,36 @@
       { id: 'e-1', title: 'AUZEF Güz Vize', date: '2026-11-14' }
     ];
 
+    const DEFAULT_QUIZ = [
+      {
+        "id": 1,
+        "soru_metni": "1776 yılında ilan olunan Amerikan Bağımsızlık Bildirgesi hakkında aşağıdakilerden hangisi söylenemez?",
+        "secenek_a": "John Locke'un felsefi görüşlerinden etkilenmiştir.",
+        "secenek_b": "Yazılmasında Thomas Jefferson'un önemli rolü vardır.",
+        "secenek_c": "Köleliğin kaldırılması gerektiği savunulmuştur.",
+        "secenek_d": "Kolonilerin yürüttükleri savaşın nedenini açıklar.",
+        "secenek_e": "Halkın kendisini yönetme hakkına vurgu yapılmıştır.",
+        "dogru_cevap": "C"
+      },
+      {
+        "id": 2,
+        "soru_metni": "İngiltere'nin Hindistan'daki yayılmacılığı ve kurduğu sömürü düzenine karşı Maysor Sultanı Tipû 1786 yılında aşağıdaki hangi devletten yardım istemiştir?",
+        "secenek_a": "Osmanlı",
+        "secenek_b": "Rusya",
+        "secenek_c": "Portekiz",
+        "secenek_d": "Almanya",
+        "secenek_e": "Avusturya",
+        "dogru_cevap": "A"
+      }
+    ];
+
     function initApp() {
       tasks = JSON.parse(localStorage.getItem('cc_pro_tasks')) || DEFAULT_TASKS;
       auditLogs = JSON.parse(localStorage.getItem('cc_pro_logs')) || [{ id: 'l-1', time: '09:00', title: 'Sistem Başlatıldı', action: 'created', note: 'Hazır.' }];
       ankiCards = JSON.parse(localStorage.getItem('cc_pro_anki')) || DEFAULT_ANKI;
       exams = JSON.parse(localStorage.getItem('cc_pro_exams')) || DEFAULT_EXAMS;
+
+      document.getElementById('jsonQuizInput').value = JSON.stringify(DEFAULT_QUIZ, null, 2);
 
       setInterval(() => {
         document.getElementById('liveClock').textContent = new Date().toLocaleTimeString('tr-TR');
@@ -644,7 +708,7 @@
       modal.classList.replace('hidden', 'flex');
     }
 
-    function revealModalQuizAnswer() { document.getElementById('modalQuizAnswer').classList.remove('hidden'); }
+    function revealModalQuizAnswer() { document.getElementById('modalQuizAnswer').classList.add('hidden'); }
 
     function resolveTaskCheck(action, snoozeMins = 5) {
       if (alertQueue.length === 0) return;
@@ -772,6 +836,156 @@
 
     function deleteAnkiCard(id) { ankiCards = ankiCards.filter(c => c.id !== id); saveState(); renderAnki(); updateMetrics(); }
 
+    // ==================== SÜRELİ & SEÇMELİ JSON SINAV MOTORU ====================
+    function loadJsonFileFromFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        document.getElementById('jsonQuizInput').value = evt.target.result;
+        alert('✅ JSON dosyası başarıyla yüklendi!');
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    function startTimedQuizSession() {
+      try {
+        const raw = document.getElementById('jsonQuizInput').value.trim();
+        if (!raw) { alert('Lütfen JSON verisi yükleyin veya yapıştırın.'); return; }
+        const data = JSON.parse(raw);
+        if (!Array.isArray(data) || data.length === 0) throw new Error();
+
+        const countSelect = document.getElementById('quizQuestionCount').value;
+        const durationMins = parseInt(document.getElementById('quizDurationMinutes').value, 10) || 10;
+
+        let selectedData = [...data].sort(() => 0.5 - Math.random());
+        if (countSelect !== 'all') {
+          const limit = parseInt(countSelect, 10);
+          selectedData = selectedData.slice(0, limit);
+        }
+
+        if (quizTimerInterval) clearInterval(quizTimerInterval);
+
+        activeQuiz = {
+          questions: selectedData.map(item => {
+            const optsMap = {
+              'A': item.secenek_a,
+              'B': item.secenek_b,
+              'C': item.secenek_c,
+              'D': item.secenek_d,
+              'E': item.secenek_e
+            };
+            const options = Object.values(optsMap).filter(Boolean);
+            const correctKey = (item.dogru_cevap || 'A').toUpperCase();
+            const correctText = optsMap[correctKey] || options[0];
+
+            return {
+              front: item.soru_metni,
+              correct: correctText,
+              options: options,
+              userAnswer: null
+            };
+          }),
+          currentIndex: 0,
+          remainingSeconds: durationMins * 60,
+          finished: false
+        };
+
+        quizTimerInterval = setInterval(() => {
+          if (!activeQuiz || activeQuiz.finished) {
+            clearInterval(quizTimerInterval);
+            return;
+          }
+          if (activeQuiz.remainingSeconds > 0) {
+            activeQuiz.remainingSeconds--;
+            const timerEl = document.getElementById('quizTimerDisplay');
+            if (timerEl) {
+              const m = Math.floor(activeQuiz.remainingSeconds / 60);
+              const s = activeQuiz.remainingSeconds % 60;
+              timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+          } else {
+            clearInterval(quizTimerInterval);
+            activeQuiz.finished = true;
+            renderQuiz();
+            alert('Süre doldu! Sınav otomatik olarak sonlandırıldı.');
+          }
+        }, 1000);
+
+        renderQuiz();
+      } catch (err) {
+        console.error(err);
+        alert('❌ Geçersiz JSON formatı!');
+      }
+    }
+
+    function renderQuiz() {
+      const container = document.getElementById('quizContainer');
+      if (!activeQuiz) return;
+
+      if (activeQuiz.finished) {
+        if (quizTimerInterval) clearInterval(quizTimerInterval);
+        const total = activeQuiz.questions.length;
+        const correctCount = activeQuiz.questions.filter(q => q.userAnswer === q.correct).length;
+        const pct = Math.round((correctCount / total) * 100);
+        container.innerHTML = `
+          <div class="text-center py-8 space-y-4">
+            <span class="text-4xl">🎉</span>
+            <h3 class="text-lg font-bold text-white">Sınav Tamamlandı!</h3>
+            <p class="text-sm text-slate-300">Başarı Puanınız: <strong class="text-indigo-400 font-mono text-xl">%${pct}</strong> (${total} sorudan ${correctCount} doğru)</p>
+            <button onclick="startTimedQuizSession()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">Testi Tekrar Başlat</button>
+          </div>
+        `;
+        return;
+      }
+
+      const q = activeQuiz.questions[activeQuiz.currentIndex];
+      const m = Math.floor(activeQuiz.remainingSeconds / 60);
+      const s = activeQuiz.remainingSeconds % 60;
+      const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 pb-2">
+            <span>Soru ${activeQuiz.currentIndex + 1} / ${activeQuiz.questions.length}</span>
+            <div class="flex items-center gap-3">
+              <span class="font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">⏳ Süre: <span id="quizTimerDisplay">${timeStr}</span></span>
+              <button onclick="finishQuizEarly()" class="text-[11px] text-rose-400 hover:underline">Sınavı Bitir</button>
+            </div>
+          </div>
+          <h3 class="text-sm sm:text-base font-bold text-white leading-relaxed">${q.front}</h3>
+          <div class="space-y-2 pt-2">
+            ${q.options.map((opt, idx) => `
+              <button onclick="answerQuiz('${opt.replace(/'/g, "\\'")}')" class="w-full text-left p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500 text-xs sm:text-sm text-slate-200 transition">
+                <span class="font-mono font-bold text-indigo-400 mr-2">${String.fromCharCode(65 + idx)})</span> ${opt}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function answerQuiz(opt) {
+      if (!activeQuiz) return;
+      const q = activeQuiz.questions[activeQuiz.currentIndex];
+      q.userAnswer = opt;
+      if (activeQuiz.currentIndex < activeQuiz.questions.length - 1) {
+        activeQuiz.currentIndex++;
+        renderQuiz();
+      } else {
+        activeQuiz.finished = true;
+        renderQuiz();
+      }
+    }
+
+    function finishQuizEarly() {
+      if (confirm('Sınavı erken bitirmek istediğinize emin misiniz?')) {
+        if (quizTimerInterval) clearInterval(quizTimerInterval);
+        activeQuiz.finished = true;
+        renderQuiz();
+      }
+    }
+
     function addAuditLog(title, action, note) {
       auditLogs.unshift({ id: 'l-' + Date.now(), time: new Date().toLocaleTimeString('tr-TR'), title, action, note });
       if (auditLogs.length > 50) auditLogs.pop();
@@ -784,11 +998,13 @@
     function clearAuditLogs() { auditLogs = []; saveState(); renderAuditLogs(); }
 
     function switchMainView(v) {
-      ['tasks', 'anki', 'analytics'].forEach(m => {
-        document.getElementById('view-' + m).classList.toggle('hidden', m !== v);
-        document.getElementById('view-' + m).classList.toggle('grid', m === v);
+      ['tasks', 'anki', 'quiz'].forEach(m => {
+        const el = document.getElementById('view-' + m);
+        if (el) {
+          el.classList.toggle('hidden', m !== v);
+          el.classList.toggle('grid', m === v);
+        }
       });
-      if (v === 'analytics') renderAnalytics();
     }
 
     function formatTime(sec) {
@@ -877,13 +1093,6 @@
           const diff = Math.ceil((new Date(e.date) - now) / (1000 * 60 * 60 * 24));
           return `<div class="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs shrink-0"><span class="font-semibold text-slate-200">${e.title}</span><span class="text-indigo-300 font-mono font-bold">${diff >= 0 ? diff + ' gün' : 'Bitti'}</span><button onclick="deleteExam('${e.id}')" class="text-rose-400">✕</button></div>`;
         }).join('');
-    }
-
-    function renderAnalytics() {
-      const cats = {}; tasks.forEach(t => cats[t.category] = (cats[t.category] || 0) + t.checkCount);
-      document.getElementById('categoryBreakdown').innerHTML = Object.entries(cats).map(([k, v]) => `<div><div class="flex justify-between text-xs mb-1 text-slate-300"><span>${k}</span><span class="font-mono text-indigo-400">${v} tur</span></div><div class="w-full h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-indigo-500" style="width:${Math.min(100, v*15)}%"></div></div></div>`).join('');
-      const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-      document.getElementById('weeklyHeatmap').innerHTML = days.map((d, i) => `<div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-center"><span class="text-[10px] text-slate-400 block">${d}</span><div class="w-5 h-5 mx-auto my-1.5 rounded bg-indigo-500/70"></div></div>`).join('');
     }
 
     function updateMetrics() {
