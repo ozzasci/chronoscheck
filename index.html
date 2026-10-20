@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChronosCheck Pro — Akademik Zaman Planlayıcı & PWA</title>
+  
+  <!-- PWA Manifest & Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4F46E5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ChronosCheck">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0B0F19;
+      color: #F8FAFC;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.88);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .alert-glow {
+      animation: pulse-amber 1.6s infinite;
+      border-color: #F59E0B !important;
+    }
+    @keyframes pulse-amber {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+      50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0B0F19; }
+    ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-12">
+
+  <!-- ÜST BİLGİ & KONTROL ÇUBUĞU -->
+  <header class="sticky top-0 z-35 glass-card border-b border-slate-800/80 px-3 sm:px-6 py-3">
+    <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Logo & Başlık -->
+      <div class="flex items-center justify-between w-full md:w-auto gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 flex items-center justify-center shadow-lg shadow-indigo-500/25 font-mono font-bold text-lg text-white shrink-0">
+            ⏳
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-sm sm:text-base font-bold tracking-tight text-white">ChronosCheck <span class="text-indigo-400">Pro</span></h1>
+              <span id="streakBadge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/35">🔥 Seri</span>
+            </div>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Akademik Zaman Planlayıcı & Anki Stüdyosu</p>
+          </div>
+        </div>
+
+        <!-- PWA Yükleme Butonu -->
+        <button id="installAppBtn" onclick="installPWA()" class="hidden px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-semibold shrink-0 animate-pulse">
+          📱 Uygulamayı Yükle
+        </button>
+      </div>
+
+      <!-- Sağ: Canlı Saat, Sesler ve Kontroller -->
+      <div class="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
+        <div class="px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span id="liveClock" class="font-mono text-xs sm:text-sm font-bold text-slate-100">00:00:00</span>
+        </div>
+
+        <select id="ambientSelect" onchange="changeAmbientSound(this.value)" class="bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-xl px-2 py-1.5 focus:outline-none cursor-pointer">
+          <option value="off">🎧 Ses: Kapalı</option>
+          <option value="rain">🌧️ Yağmur</option>
+          <option value="brown">🌊 Derin Odak</option>
+          <option value="pink">📻 Kütüphane</option>
+        </select>
+
+        <button id="ttsToggleBtn" onclick="toggleTTS()" class="px-2.5 py-1.5 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-[11px] font-medium text-indigo-300 hover:bg-indigo-500/25 transition">
+          🗣️ Asistan
+        </button>
+
+        <button id="soundToggleBtn" onclick="toggleSound()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-[11px] font-medium text-slate-200 hover:bg-slate-700 transition">
+          🔔 Alarm
+        </button>
+
+        <button onclick="openBackupModal()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-[11px] font-medium text-slate-300 hover:text-white transition">
+          💾 Yedek
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- SINAV GERİ SAYIM (D-DAY) ŞERİDİ -->
+  <div class="bg-slate-900/60 border-b border-slate-800/80 px-3 sm:px-6 py-2">
+    <div class="max-w-[1600px] mx-auto flex items-center justify-between gap-3 overflow-x-auto">
+      <div id="examCountdownBar" class="flex items-center gap-2 py-0.5"></div>
+      <button onclick="openExamModal()" class="shrink-0 text-xs font-medium text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-lg transition">
+        + Sınav Ekle
+      </button>
+    </div>
+  </div>
+
+  <!-- ANA İÇERİK -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-6 py-5 flex flex-col gap-5">
+
+    <!-- ÜST METRİK KARTLARI -->
+    <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Aktif Sayaçlar</p>
+          <p id="statActive" class="text-xl font-bold font-mono text-white mt-0.5">0</p>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm">⚡</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-amber-400">Onay Bekleyen</p>
+          <p id="statPending" class="text-xl font-bold font-mono text-amber-400 mt-0.5">0</p>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-sm">🔔</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Onaylanan Tur</p>
+          <p id="statChecks" class="text-xl font-bold font-mono text-emerald-400 mt-0.5">0</p>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm">✅</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-purple-400">Anki Kartları</p>
+          <p id="statAnkiCount" class="text-xl font-bold font-mono text-purple-400 mt-0.5">0</p>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-sm">🗂️</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between col-span-2 sm:col-span-1">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-sky-400">Uyum Oranı</p>
+          <p id="statCompliance" class="text-xl font-bold font-mono text-sky-400 mt-0.5">%100</p>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 text-sm">📊</div>
+      </div>
+    </section>
+
+    <!-- ANA SEKME GEZİNTİSİ -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div class="grid grid-cols-3 gap-1.5 sm:flex sm:items-center">
+        <button onclick="switchMainView('tasks')" id="viewBtn-tasks" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 transition">
+          ⏱️ Görevler
+        </button>
+        <button onclick="switchMainView('anki')" id="viewBtn-anki" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+          🗂️ Anki Stüdyosu
+        </button>
+        <button onclick="switchMainView('analytics')" id="viewBtn-analytics" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+          📈 Analitik
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between sm:justify-end gap-2 text-xs text-slate-400 overflow-x-auto">
+        <span class="shrink-0">Hazır Rutin:</span>
+        <button onclick="loadRoutinePreset('weekday')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0">🌙 Hafta İçi</button>
+        <button onclick="loadRoutinePreset('weekend')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0">🔥 Hafta Sonu</button>
+      </div>
+    </div>
+
+    <!-- GÖRÜNÜM 1: GÖREVLER -->
+    <div id="view-tasks" class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div class="lg:col-span-4 flex flex-col gap-5">
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800">
+          <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+            Yeni Görev & Hatırlatıcı
+          </h2>
+
+          <form id="taskForm" onsubmit="handleCreateTask(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Görev Adı / Konu</label>
+              <input id="taskTitle" type="text" required placeholder="Örn: Tarih Ünite Tekrarı"
+                class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
+                <select id="taskCategory" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500">
+                  <option value="Tarih & Ders">📚 Tarih & Ders</option>
+                  <option value="Araştırma & Makale">🎓 Araştırma & Makale</option>
+                  <option value="Soru & Anki Tekrarı">📝 Soru & Anki</option>
+                  <option value="Ofis & İdari">🏢 Ofis & İdari</option>
+                  <option value="Sağlık & Mola">🌿 Sağlık & Mola</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Öncelik</label>
+                <select id="taskPriority" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500">
+                  <option value="high">🔴 Yüksek</option>
+                  <option value="medium" selected>🟡 Normal</option>
+                  <option value="low">🟢 Düşük</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Alt Kontrol Maddeleri (Virgülle ayırın)</label>
+              <input id="taskChecklist" type="text" placeholder="Örn: Not oku, 20 soru çöz"
+                class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Aralık (Dakika)</label>
+              <div class="grid grid-cols-5 gap-1 mb-2">
+                <button type="button" onclick="setQuickInterval(1)" class="py-1 text-xs font-mono rounded bg-slate-800 border border-slate-700 text-slate-300">1dk</button>
+                <button type="button" onclick="setQuickInterval(15)" class="py-1 text-xs font-mono rounded bg-slate-800 border border-slate-700 text-slate-300">15dk</button>
+                <button type="button" onclick="setQuickInterval(25)" class="py-1 text-xs font-mono rounded bg-slate-800 border border-slate-700 text-slate-300">25dk</button>
+                <button type="button" onclick="setQuickInterval(45)" class="py-1 text-xs font-mono rounded bg-slate-800 border border-slate-700 text-slate-300">45dk</button>
+                <button type="button" onclick="setQuickInterval(60)" class="py-1 text-xs font-mono rounded bg-slate-800 border border-slate-700 text-slate-300">60dk</button>
+              </div>
+              <input id="taskInterval" type="number" min="1" max="720" value="30" required
+                class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-mono text-white focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5 text-xs text-slate-300">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input id="taskPomodoro" type="checkbox" checked class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                <span>🍅 Pomodoro Mola Zinciri (10 dk mola)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input id="taskQuizCheck" type="checkbox" checked class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                <span>🧠 Süre bitince Anki Soru Doğrulaması</span>
+              </label>
+            </div>
+
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-indigo-600/25 transition">
+              + Görevi Başlat
+            </button>
+          </form>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 flex flex-col max-h-[360px]">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs sm:text-sm font-bold text-white">📋 Denetim Kayıtları</h3>
+            <div class="flex items-center gap-2">
+              <button onclick="exportAuditLogTxt()" class="text-[10px] px-2 py-1 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">TXT</button>
+              <button onclick="clearAuditLogs()" class="text-[10px] text-slate-400 hover:text-rose-400">Temizle</button>
+            </div>
+          </div>
+          <div id="auditLogList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-8 flex flex-col gap-4">
+        <div class="glass-card rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-1">
+            <button onclick="setTaskFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-600 text-white">Tümü</button>
+            <button onclick="setTaskFilter('active')" id="filter-active" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300">Aktif</button>
+            <button onclick="setTaskFilter('alert')" id="filter-alert" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-amber-400">Bekleyen</button>
+            <button onclick="setTaskFilter('completed')" id="filter-completed" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-emerald-400">Biten</button>
+          </div>
+          <button onclick="pauseOrResumeAll()" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 text-slate-200 border border-slate-700">
+            ⏯️ Tümünü Duraklat/Başlat
+          </button>
+        </div>
+
+        <div id="tasksGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
+      </div>
+    </div>
+
+    <!-- GÖRÜNÜM 2: ANKİ STÜDYOSU -->
+    <div id="view-anki" class="hidden grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div class="lg:col-span-5 flex flex-col gap-5">
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800">
+          <h2 class="text-sm font-bold text-white mb-1">🗂️ Yeni Bilgi Kartı</h2>
+          <p class="text-xs text-slate-400 mb-3">Görev denetimlerinde soru olarak sorulur.</p>
+          
+          <form onsubmit="handleAddAnkiCard(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Ön Yüz (Soru)</label>
+              <textarea id="ankiFront" required rows="2" placeholder="Soru yazın..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Arka Yüz (Cevap)</label>
+              <textarea id="ankiBack" required rows="2" placeholder="Cevap yazın..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Etiket</label>
+              <input id="ankiTag" type="text" value="Osmanlı_Tarihi"
+                class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs sm:text-sm transition">
+              + Desteye Kart Ekle
+            </button>
+          </form>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-3">
+          <h3 class="text-sm font-bold text-white">🔄 Anki İçe / Dışa Aktarım</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="exportAnkiFile('tab')" class="py-2 px-2 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-200 text-[11px] font-semibold">TXT İndir</button>
+            <button onclick="exportAnkiFile('semicolon')" class="py-2 px-2 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-200 text-[11px] font-semibold">CSV İndir</button>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Bilgisayardan .TXT / .CSV Seç</label>
+            <input type="file" id="ankiFileInput" accept=".txt,.csv" onchange="loadAnkiFileFromFile(event)"
+              class="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white cursor-pointer">
+          </div>
+          <div>
+            <textarea id="ankiBulkInput" rows="3" placeholder="Soru ; Cevap ; Etiket"
+              class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-slate-200 focus:outline-none"></textarea>
+            <button onclick="importAnkiBulk()" class="mt-2 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white border border-slate-700">
+              📥 Satırları Desteye Yükle
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7 flex flex-col gap-3">
+        <div class="glass-card rounded-2xl p-3 text-xs text-slate-300">
+          🧠 Kartın cevabını görmek için üzerine tıklayın.
+        </div>
+        <div id="ankiCardsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+      </div>
+    </div>
+
+    <!-- GÖRÜNÜM 3: ANALİTİK -->
+    <div id="view-analytics" class="hidden grid-cols-1 lg:grid-cols-12 gap-5">
+      <div class="lg:col-span-6 glass-card rounded-2xl p-5 border border-slate-800">
+        <h3 class="text-sm font-bold text-white mb-3">📊 Kategori Dağılımı</h3>
+        <div id="categoryBreakdown" class="space-y-3"></div>
+      </div>
+      <div class="lg:col-span-6 glass-card rounded-2xl p-5 border border-slate-800">
+        <h3 class="text-sm font-bold text-white mb-3">🗓️ Haftalık Isı Haritası</h3>
+        <div id="weeklyHeatmap" class="grid grid-cols-7 gap-2 pt-2"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODALLAR -->
+  <div id="checkModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/85 backdrop-blur-md p-3 sm:p-4">
+    <div class="glass-card max-w-lg w-full rounded-3xl p-5 sm:p-6 border-2 border-amber-500/70 shadow-2xl">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/25 border border-amber-500/40 flex items-center justify-center text-xl sm:text-2xl animate-bounce shrink-0">
+            ⏰
+          </div>
+          <div>
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              Süre Doldu • Kontrol
+            </span>
+            <h3 id="modalTaskTitle" class="text-base sm:text-lg font-bold text-white mt-1">Görev</h3>
+            <p id="modalTaskMeta" class="text-[11px] text-slate-400"></p>
+          </div>
+        </div>
+        <span id="modalQueueBadge" class="px-2 py-1 rounded-lg bg-slate-800 text-xs font-mono text-slate-300">1/1</span>
+      </div>
+
+      <div id="modalChecklistBox" class="mt-3 p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300"></div>
+
+      <div id="modalQuizBox" class="mt-3 p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 hidden">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-bold uppercase text-indigo-300">🧠 Anki Soru Yoklaması</span>
+          <button type="button" onclick="revealModalQuizAnswer()" class="text-[10px] text-amber-300 hover:underline">Cevabı Göster</button>
+        </div>
+        <p id="modalQuizQuestion" class="text-xs sm:text-sm font-semibold text-white"></p>
+        <p id="modalQuizAnswer" class="text-xs text-emerald-300 mt-2 pt-2 border-t border-indigo-500/20 hidden"></p>
+      </div>
+
+      <div class="mt-3">
+        <input id="modalCheckNote" type="text" placeholder="Bu turda ne yaptınız? (Not yazın)"
+          class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+        <button onclick="resolveTaskCheck('verified_continue')" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg">
+          ✅ Kontrol Edildi & Yeni Tur
+        </button>
+        <button onclick="resolveTaskCheck('verified_complete')" class="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg">
+          🏁 Tamamen Bitir
+        </button>
+        <button onclick="resolveTaskCheck('snooze', 5)" class="py-2 px-3 rounded-xl bg-slate-800 text-amber-300 font-medium text-xs border border-slate-700">
+          ⏳ +5 Dk Ertele
+        </button>
+        <button onclick="resolveTaskCheck('missed')" class="py-2 px-3 rounded-xl bg-rose-500/15 text-rose-300 font-medium text-xs border border-rose-500/30">
+          ❌ Yapılamadı
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="examModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="glass-card max-w-sm w-full rounded-2xl p-5 border border-slate-700">
+      <h3 class="text-sm font-bold text-white mb-3">🎯 Yeni Sınav / Hedef</h3>
+      <form onsubmit="handleAddExam(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs text-slate-300 mb-1">Sınav Adı</label>
+          <input id="examTitle" type="text" required placeholder="Örn: AUZEF Vize" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-300 mb-1">Tarih</label>
+          <input id="examDate" type="date" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white">
+        </div>
+        <div class="flex justify-end gap-2 pt-1">
+          <button type="button" onclick="closeExamModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs text-slate-300">İptal</button>
+          <button type="submit" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-xs font-semibold text-white">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="backupModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="glass-card max-w-md w-full rounded-2xl p-5 border border-slate-700 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white">💾 Veri Yedekleme</h3>
+        <button onclick="closeBackupModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <p class="text-xs text-slate-400">Tüm görev ve anki kartlarınızı JSON olarak indirebilirsiniz.</p>
+      <div class="flex gap-2">
+        <button onclick="downloadJsonBackup()" class="flex-1 py-2 rounded-xl bg-indigo-600 text-xs font-semibold text-white">JSON İndir</button>
+        <button onclick="resetAllData()" class="py-2 px-3 rounded-xl bg-rose-500/20 text-xs font-semibold text-rose-300 border border-rose-500/30">Sıfırla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+    let tasks = [];
+    let auditLogs = [];
+    let ankiCards = [];
+    let exams = [];
+    let alertQueue = [];
+    let currentFilter = 'all';
+    let soundEnabled = true;
+    let ttsEnabled = true;
+    let audioCtx = null;
+    let ambientNode = null;
+    let deferredPrompt = null;
+
+    // Service Worker Kaydı (PWA için şart)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW kayıt hatası:', err));
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('installAppBtn').classList.remove('hidden');
+    });
+
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            document.getElementById('installAppBtn').classList.add('hidden');
+          }
+          deferredPrompt = null;
+        });
+      }
+    }
+
+    const DEFAULT_TASKS = [
+      {
+        id: 't-1',
+        title: 'Tarih Lisans Ünite Okuması & Notlar',
+        category: 'Tarih & Ders',
+        priority: 'high',
+        intervalMinutes: 45,
+        totalSeconds: 45 * 60,
+        remainingSeconds: 45 * 60,
+        status: 'running',
+        pomodoro: true,
+        isBreak: false,
+        quizCheck: true,
+        checkCount: 2,
+        missedCount: 0,
+        lastChecked: 'Bugün',
+        checklist: [{ text: 'Özet PDF oku', done: true }, { text: 'Not çıkar', done: false }]
+      }
+    ];
+
+    const DEFAULT_ANKI = [
+      { id: 'a-1', front: 'Mukataa nedir?', back: 'Gelirleri doğrudan hazineye gitmeyip iltizama verilen gelirler.', tag: 'Osmanlı_Maliyesi' },
+      { id: 'a-2', front: 'İrad-ı Cedid hangi padişah döneminde kuruldu?', back: 'III. Selim', tag: 'Osmanlı_Maliyesi' }
+    ];
+
+    const DEFAULT_EXAMS = [
+      { id: 'e-1', title: 'AUZEF Güz Vize', date: '2026-11-14' }
+    ];
+
+    function initApp() {
+      tasks = JSON.parse(localStorage.getItem('cc_pro_tasks')) || DEFAULT_TASKS;
+      auditLogs = JSON.parse(localStorage.getItem('cc_pro_logs')) || [{ id: 'l-1', time: '09:00', title: 'Sistem Başlatıldı', action: 'created', note: 'Hazır.' }];
+      ankiCards = JSON.parse(localStorage.getItem('cc_pro_anki')) || DEFAULT_ANKI;
+      exams = JSON.parse(localStorage.getItem('cc_pro_exams')) || DEFAULT_EXAMS;
+
+      setInterval(() => {
+        document.getElementById('liveClock').textContent = new Date().toLocaleTimeString('tr-TR');
+      }, 1000);
+      setInterval(tickAllTimers, 1000);
+      renderAll();
+    }
+
+    function saveState() {
+      localStorage.setItem('cc_pro_tasks', JSON.stringify(tasks));
+      localStorage.setItem('cc_pro_logs', JSON.stringify(auditLogs));
+      localStorage.setItem('cc_pro_anki', JSON.stringify(ankiCards));
+      localStorage.setItem('cc_pro_exams', JSON.stringify(exams));
+    }
+
+    function tickAllTimers() {
+      let changed = false;
+      tasks.forEach(t => {
+        if (t.status === 'running') {
+          if (t.remainingSeconds > 0) { t.remainingSeconds--; changed = true; }
+          if (t.remainingSeconds <= 0) { t.status = 'alert'; enqueueTaskAlert(t.id); changed = true; }
+        }
+      });
+      if (changed) { renderTasks(); updateMetrics(); }
+    }
+
+    function playAlertSound() {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+          gain.gain.setValueAtTime(0.1, now + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.2);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.12); osc.stop(now + idx * 0.12 + 0.22);
+        });
+      } catch (e) {}
+    }
+
+    function speakTurkish(text) {
+      if (!ttsEnabled || !('speechSynthesis' in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'tr-TR';
+        window.speechSynthesis.speak(utter);
+      } catch (e) {}
+    }
+
+    function changeAmbientSound(type) {
+      if (ambientNode) { try { ambientNode.stop(); ambientNode.disconnect(); } catch(e) {} ambientNode = null; }
+      if (type === 'off') return;
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const bufferSize = 2 * audioCtx.sampleRate;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      let lastOut = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        output[i] = type === 'brown' ? (lastOut + (0.02 * white)) / 1.02 : white * 0.3;
+        lastOut = output[i];
+      }
+      const source = audioCtx.createBufferSource();
+      source.buffer = noiseBuffer; source.loop = true;
+      const gain = audioCtx.createGain(); gain.gain.value = 0.05;
+      source.connect(gain); gain.connect(audioCtx.destination);
+      source.start(0); ambientNode = source;
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundToggleBtn').textContent = soundEnabled ? '🔔 Alarm' : '🔕 Alarm';
+    }
+    function toggleTTS() {
+      ttsEnabled = !ttsEnabled;
+      document.getElementById('ttsToggleBtn').textContent = ttsEnabled ? '🗣️ Asistan' : '🤐 Asistan';
+    }
+
+    function enqueueTaskAlert(taskId) {
+      if (!alertQueue.includes(taskId)) alertQueue.push(taskId);
+      playAlertSound();
+      const t = tasks.find(x => x.id === taskId);
+      if (t) speakTurkish(`Süre doldu: ${t.title}`);
+      showModalIfNeeded();
+    }
+
+    function showModalIfNeeded() {
+      const modal = document.getElementById('checkModal');
+      if (alertQueue.length === 0) { modal.classList.replace('flex', 'hidden'); return; }
+      const t = tasks.find(x => x.id === alertQueue[0]);
+      if (!t) { alertQueue.shift(); showModalIfNeeded(); return; }
+
+      document.getElementById('modalTaskTitle').textContent = t.title;
+      document.getElementById('modalTaskMeta').textContent = `${t.category} • Periyot: ${t.intervalMinutes} dk`;
+      document.getElementById('modalQueueBadge').textContent = `1/${alertQueue.length}`;
+      document.getElementById('modalCheckNote').value = '';
+
+      const clBox = document.getElementById('modalChecklistBox');
+      if (t.checklist && t.checklist.length > 0) {
+        clBox.innerHTML = `<div class="font-semibold text-slate-200 mb-1">Alt Kontroller:</div>` +
+          t.checklist.map((item, idx) => `
+            <label class="flex items-center gap-2 py-0.5 cursor-pointer">
+              <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleSubtask('${t.id}', ${idx})" class="rounded bg-slate-800 text-indigo-500">
+              <span class="${item.done ? 'line-through text-slate-500' : 'text-slate-200'}">${item.text}</span>
+            </label>
+          `).join('');
+        clBox.classList.remove('hidden');
+      } else { clBox.classList.add('hidden'); }
+
+      const quizBox = document.getElementById('modalQuizBox');
+      if (t.quizCheck && ankiCards.length > 0) {
+        const rc = ankiCards[Math.floor(Math.random() * ankiCards.length)];
+        document.getElementById('modalQuizQuestion').textContent = rc.front;
+        const ans = document.getElementById('modalQuizAnswer');
+        ans.textContent = `Cevap: ${rc.back}`; ans.classList.add('hidden');
+        quizBox.classList.remove('hidden');
+      } else { quizBox.classList.add('hidden'); }
+
+      modal.classList.replace('hidden', 'flex');
+    }
+
+    function revealModalQuizAnswer() { document.getElementById('modalQuizAnswer').classList.remove('hidden'); }
+
+    function resolveTaskCheck(action, snoozeMins = 5) {
+      if (alertQueue.length === 0) return;
+      const taskId = alertQueue.shift();
+      const t = tasks.find(x => x.id === taskId);
+      const note = document.getElementById('modalCheckNote').value.trim();
+
+      if (t) {
+        t.lastChecked = new Date().toLocaleTimeString('tr-TR');
+        if (action === 'verified_continue') {
+          t.checkCount++;
+          t.remainingSeconds = (t.pomodoro && !t.isBreak) ? 10 * 60 : t.intervalMinutes * 60;
+          t.isBreak = (t.pomodoro && !t.isBreak);
+          t.status = 'running';
+        } else if (action === 'verified_complete') {
+          t.checkCount++; t.status = 'completed'; t.remainingSeconds = 0;
+        } else if (action === 'snooze') {
+          t.remainingSeconds = snoozeMins * 60; t.status = 'running';
+        } else if (action === 'missed') {
+          t.missedCount++; t.remainingSeconds = t.intervalMinutes * 60; t.status = 'running';
+        }
+        addAuditLog(t.title, action, note || 'Tur onaylandı.');
+      }
+      saveState(); renderAll(); showModalIfNeeded();
+    }
+
+    function setQuickInterval(m) { document.getElementById('taskInterval').value = m; }
+
+    function handleCreateTask(e) {
+      e.preventDefault();
+      const title = document.getElementById('taskTitle').value.trim();
+      const category = document.getElementById('taskCategory').value;
+      const priority = document.getElementById('taskPriority').value;
+      const intervalMinutes = parseInt(document.getElementById('taskInterval').value, 10) || 25;
+      const rawCl = document.getElementById('taskChecklist').value.trim();
+      const checklist = rawCl ? rawCl.split(',').map(s => ({ text: s.trim(), done: false })) : [];
+
+      tasks.unshift({
+        id: 't-' + Date.now(), title, category, priority, intervalMinutes,
+        totalSeconds: intervalMinutes * 60, remainingSeconds: intervalMinutes * 60,
+        status: 'running', pomodoro: document.getElementById('taskPomodoro').checked,
+        isBreak: false, quizCheck: document.getElementById('taskQuizCheck').checked,
+        checkCount: 0, missedCount: 0, lastChecked: 'Yeni', checklist
+      });
+
+      document.getElementById('taskTitle').value = '';
+      document.getElementById('taskChecklist').value = '';
+      saveState(); renderAll();
+    }
+
+    function triggerDemo5Sec(id) {
+      const t = tasks.find(x => x.id === id);
+      if (t) { t.status = 'running'; t.remainingSeconds = 5; renderTasks(); }
+    }
+
+    function toggleTaskRunPause(id) {
+      const t = tasks.find(x => x.id === id);
+      if (t) { t.status = t.status === 'running' ? 'paused' : 'running'; saveState(); renderTasks(); }
+    }
+
+    function toggleSubtask(taskId, idx) {
+      const t = tasks.find(x => x.id === taskId);
+      if (t && t.checklist[idx]) { t.checklist[idx].done = !t.checklist[idx].done; saveState(); renderTasks(); }
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(x => x.id !== id);
+      alertQueue = alertQueue.filter(x => x !== id);
+      saveState(); renderAll();
+    }
+
+    function pauseOrResumeAll() {
+      const run = tasks.some(t => t.status === 'running');
+      tasks.forEach(t => { if (t.status === 'running' || t.status === 'paused') t.status = run ? 'paused' : 'running'; });
+      saveState(); renderAll();
+    }
+
+    function setTaskFilter(f) { currentFilter = f; renderTasks(); }
+
+    function handleAddAnkiCard(e) {
+      e.preventDefault();
+      ankiCards.unshift({
+        id: 'a-' + Date.now(),
+        front: document.getElementById('ankiFront').value.trim(),
+        back: document.getElementById('ankiBack').value.trim(),
+        tag: document.getElementById('ankiTag').value.trim() || 'Genel'
+      });
+      document.getElementById('ankiFront').value = '';
+      document.getElementById('ankiBack').value = '';
+      saveState(); renderAnki(); updateMetrics();
+    }
+
+    function exportAnkiFile(type) {
+      const sep = type === 'tab' ? '\t' : ';';
+      const ext = type === 'tab' ? 'txt' : 'csv';
+      const lines = ankiCards.map(c => `${c.front}${sep}${c.back}${sep}${c.tag}`);
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = `anki_destesi.${ext}`; a.click();
+    }
+
+    function loadAnkiFileFromFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = function(evt) {
+        document.getElementById('ankiBulkInput').value = evt.target.result;
+        importAnkiBulk(); e.target.value = '';
+      };
+      r.readAsText(file, 'UTF-8');
+    }
+
+    function importAnkiBulk() {
+      const raw = document.getElementById('ankiBulkInput').value.trim();
+      if (!raw) return;
+      raw.split('\n').forEach((r, idx) => {
+        const p = r.includes(';') ? r.split(';') : r.split('\t');
+        if (p.length >= 2) {
+          ankiCards.unshift({ id: 'a-' + Date.now() + '-' + idx, front: p[0].trim(), back: p[1].trim(), tag: (p[2] || 'Genel').trim() });
+        }
+      });
+      document.getElementById('ankiBulkInput').value = '';
+      saveState(); renderAnki(); updateMetrics();
+    }
+
+    function deleteAnkiCard(id) { ankiCards = ankiCards.filter(c => c.id !== id); saveState(); renderAnki(); updateMetrics(); }
+
+    function addAuditLog(title, action, note) {
+      auditLogs.unshift({ id: 'l-' + Date.now(), time: new Date().toLocaleTimeString('tr-TR'), title, action, note });
+      if (auditLogs.length > 50) auditLogs.pop();
+    }
+
+    function exportAuditLogTxt() {
+      const blob = new Blob([auditLogs.map(l => `[${l.time}] ${l.title} -> ${l.note}`).join('\n')], { type: 'text/plain' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'denetim_raporu.txt'; a.click();
+    }
+    function clearAuditLogs() { auditLogs = []; saveState(); renderAuditLogs(); }
+
+    function switchMainView(v) {
+      ['tasks', 'anki', 'analytics'].forEach(m => {
+        document.getElementById('view-' + m).classList.toggle('hidden', m !== v);
+        document.getElementById('view-' + m).classList.toggle('grid', m === v);
+      });
+      if (v === 'analytics') renderAnalytics();
+    }
+
+    function formatTime(sec) {
+      return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+    }
+
+    function renderTasks() {
+      const grid = document.getElementById('tasksGrid');
+      const filtered = tasks.filter(t => currentFilter === 'all' || t.status === currentFilter);
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="col-span-2 glass-card rounded-2xl p-6 text-center text-xs text-slate-400">Görev bulunamadı.</div>`;
+        return;
+      }
+      grid.innerHTML = filtered.map(t => {
+        const pct = t.totalSeconds > 0 ? Math.round(((t.totalSeconds - t.remainingSeconds) / t.totalSeconds) * 100) : 100;
+        const alert = t.status === 'alert';
+        return `
+          <div class="glass-card rounded-2xl p-4 flex flex-col justify-between border border-slate-800 ${alert ? 'alert-glow' : ''}">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">${t.category}</span>
+                <button onclick="deleteTask('${t.id}')" class="text-slate-500 hover:text-rose-400 text-xs">✕</button>
+              </div>
+              <h3 class="text-sm sm:text-base font-bold text-white">${t.title}</h3>
+
+              <div class="mt-2.5 p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] text-slate-400 block">Kalan Süre</span>
+                  <span class="font-mono text-xl font-bold ${alert ? 'text-amber-400' : 'text-white'}">${formatTime(t.remainingSeconds)}</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs font-mono text-emerald-400 block">✅ ${t.checkCount} Onay</span>
+                </div>
+              </div>
+
+              <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden mt-2">
+                <div class="h-full bg-indigo-500 transition-all" style="width:${pct}%"></div>
+              </div>
+
+              ${t.checklist && t.checklist.length > 0 ? `
+                <div class="mt-2.5 pt-2 border-t border-slate-800 space-y-1">
+                  ${t.checklist.map((c, i) => `
+                    <label class="flex items-center gap-2 text-xs cursor-pointer">
+                      <input type="checkbox" ${c.done ? 'checked' : ''} onchange="toggleSubtask('${t.id}', ${i})" class="rounded bg-slate-800 text-indigo-500">
+                      <span class="${c.done ? 'line-through text-slate-500' : 'text-slate-300'}">${c.text}</span>
+                    </label>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-800">
+              ${alert ? `
+                <button onclick="showModalIfNeeded()" class="flex-1 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">Doğrula</button>
+              ` : `
+                <button onclick="toggleTaskRunPause('${t.id}')" class="flex-1 py-1.5 rounded-xl bg-slate-800 text-xs font-semibold text-white border border-slate-700">
+                  ${t.status === 'running' ? '⏸ Duraklat' : '▶ Başlat'}
+                </button>
+                <button onclick="triggerDemo5Sec('${t.id}')" class="px-2.5 py-1.5 rounded-xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs font-mono">5sn Test</button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAuditLogs() {
+      document.getElementById('auditLogList').innerHTML = auditLogs.length === 0 ? '<p class="text-xs text-slate-500 text-center py-2">Kayıt yok.</p>' :
+        auditLogs.map(l => `<div class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-xs"><span class="font-semibold text-slate-200">${l.title}</span> <span class="text-[10px] text-slate-400">(${l.time})</span></div>`).join('');
+    }
+
+    function renderAnki() {
+      document.getElementById('ankiCardsGrid').innerHTML = ankiCards.map(c => `
+        <div onclick="this.querySelector('.ans').classList.toggle('hidden')" class="glass-card rounded-xl p-3.5 border border-slate-800 cursor-pointer">
+          <div class="flex justify-between items-center mb-1"><span class="text-[10px] font-mono text-purple-300">#${c.tag}</span><button onclick="event.stopPropagation(); deleteAnkiCard('${c.id}')" class="text-xs text-rose-400">Sil</button></div>
+          <p class="text-xs sm:text-sm font-semibold text-white">${c.front}</p>
+          <div class="ans hidden mt-2 pt-2 border-t border-slate-800 text-xs text-emerald-300">💡 ${c.back}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderExams() {
+      const now = new Date();
+      document.getElementById('examCountdownBar').innerHTML = exams.length === 0 ? '<span class="text-xs text-slate-500">Hedef yok.</span>' :
+        exams.map(e => {
+          const diff = Math.ceil((new Date(e.date) - now) / (1000 * 60 * 60 * 24));
+          return `<div class="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs shrink-0"><span class="font-semibold text-slate-200">${e.title}</span><span class="text-indigo-300 font-mono font-bold">${diff >= 0 ? diff + ' gün' : 'Bitti'}</span><button onclick="deleteExam('${e.id}')" class="text-rose-400">✕</button></div>`;
+        }).join('');
+    }
+
+    function renderAnalytics() {
+      const cats = {}; tasks.forEach(t => cats[t.category] = (cats[t.category] || 0) + t.checkCount);
+      document.getElementById('categoryBreakdown').innerHTML = Object.entries(cats).map(([k, v]) => `<div><div class="flex justify-between text-xs mb-1 text-slate-300"><span>${k}</span><span class="font-mono text-indigo-400">${v} tur</span></div><div class="w-full h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-indigo-500" style="width:${Math.min(100, v*15)}%"></div></div></div>`).join('');
+      const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+      document.getElementById('weeklyHeatmap').innerHTML = days.map((d, i) => `<div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-center"><span class="text-[10px] text-slate-400 block">${d}</span><div class="w-5 h-5 mx-auto my-1.5 rounded bg-indigo-500/70"></div></div>`).join('');
+    }
+
+    function updateMetrics() {
+      document.getElementById('statActive').textContent = tasks.filter(t => t.status === 'running').length;
+      document.getElementById('statPending').textContent = tasks.filter(t => t.status === 'alert').length;
+      document.getElementById('statChecks').textContent = tasks.reduce((s, t) => s + t.checkCount, 0);
+      document.getElementById('statAnkiCount').textContent = ankiCards.length;
+    }
+
+    function renderAll() { renderTasks(); renderAuditLogs(); renderAnki(); renderExams(); updateMetrics(); }
+
+    function loadRoutinePreset(type) {
+      if (type === 'weekday') tasks.unshift({ id: 't-' + Date.now(), title: 'Akşam Tarih & Soru Tekrarı', category: 'Tarih & Ders', priority: 'high', intervalMinutes: 30, totalSeconds: 1800, remainingSeconds: 1800, status: 'running', pomodoro: true, isBreak: false, quizCheck: true, checkCount: 0, missedCount: 0, lastChecked: 'Yeni', checklist: [{text:'Özet oku', done:false}] });
+      saveState(); renderAll();
+    }
+
+    function openExamModal() { document.getElementById('examModal').classList.replace('hidden', 'flex'); }
+    function closeExamModal() { document.getElementById('examModal').classList.replace('flex', 'hidden'); }
+    function handleAddExam(e) {
+      e.preventDefault();
+      exams.push({ id: 'e-' + Date.now(), title: document.getElementById('examTitle').value, date: document.getElementById('examDate').value });
+      closeExamModal(); saveState(); renderExams();
+    }
+    function deleteExam(id) { exams = exams.filter(e => e.id !== id); saveState(); renderExams(); }
+
+    function openBackupModal() { document.getElementById('backupModal').classList.replace('hidden', 'flex'); }
+    function closeBackupModal() { document.getElementById('backupModal').classList.replace('flex', 'hidden'); }
+    function downloadJsonBackup() {
+      const blob = new Blob([JSON.stringify({ tasks, auditLogs, ankiCards, exams }, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'chronos_yedek.json'; a.click();
+    }
+    function resetAllData() { localStorage.clear(); location.reload(); }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
