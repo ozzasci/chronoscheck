@@ -308,7 +308,7 @@
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-300 mb-1">Etiket</label>
-              <input id="ankiTag" type="text" value="Osmanlı_Tarihi"
+              <input id="ankiTag" type="text" value="Sömürgecilik_Tarihi" placeholder="Örn: Sömürgecilik"
                 class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
             </div>
             <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs sm:text-sm transition">
@@ -320,8 +320,8 @@
         <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-3">
           <h3 class="text-sm font-bold text-white">🔄 Anki İçe / Dışa Aktarım</h3>
           <div class="grid grid-cols-2 gap-2">
-            <button onclick="exportAnkiFile('tab')" class="py-2 px-2 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-200 text-[11px] font-semibold">TXT İndir</button>
-            <button onclick="exportAnkiFile('semicolon')" class="py-2 px-2 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-200 text-[11px] font-semibold">CSV İndir</button>
+            <button onclick="exportAnkiFile('tab')" class="py-2 px-2 rounded-xl bg-indigo-600/25 border border-indigo-500/40 text-indigo-200 text-[11px] font-semibold">TXT İndir</button>
+            <button onclick="exportAnkiFile('semicolon')" class="py-2 px-2 rounded-xl bg-emerald-600/25 border border-emerald-500/40 text-emerald-200 text-[11px] font-semibold">CSV İndir</button>
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Bilgisayardan .TXT / .CSV Seç</label>
@@ -339,18 +339,19 @@
       </div>
 
       <div class="lg:col-span-7 flex flex-col gap-3">
-        <div class="glass-card rounded-2xl p-3 text-xs text-slate-300">
-          🧠 Kartın cevabını görmek için üzerine tıklayın.
+        <div class="glass-card rounded-2xl p-3 text-xs text-slate-300 flex items-center justify-between">
+          <span>🧠 <b>Anki Destesi:</b> Cevabı görmek için istediğiniz karta tıklayın.</span>
+          <span id="ankiTotalBadge" class="font-mono text-purple-300 font-bold">0 Kart</span>
         </div>
         <div id="ankiCardsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
       </div>
     </div>
 
-    <!-- GÖRÜNÜM 3: SÜRELİ SINAV STÜDYOSU (JSON DESTEKLİ) -->
+    <!-- GÖRÜNÜM 3: SÜRELİ & SEÇMELİ JSON SINAV STÜDYOSU -->
     <div id="view-quiz" class="hidden grid-cols-1 lg:grid-cols-12 gap-5 items-start">
       <div class="lg:col-span-4 glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
         <h2 class="text-sm font-bold text-white">📝 Sınav Ayarları & JSON Yükle</h2>
-        <p class="text-xs text-slate-400">JSON formatındaki soru bankanızı yükleyin[cite: 4], soru sayısını ve sınav süresini belirleyerek testi başlatın.</p>
+        <p class="text-xs text-slate-400">Soru bankası JSON dosyanızı yükleyin[cite: 4], soru sayısını ve sınav süresini belirleyerek testi başlatın.</p>
         
         <div>
           <label class="block text-xs text-slate-300 mb-1">JSON Dosyası Seç (.json)</label>
@@ -708,7 +709,7 @@
       modal.classList.replace('hidden', 'flex');
     }
 
-    function revealModalQuizAnswer() { document.getElementById('modalQuizAnswer').classList.add('hidden'); }
+    function revealModalQuizAnswer() { document.getElementById('modalQuizAnswer').classList.remove('hidden'); }
 
     function resolveTaskCheck(action, snoozeMins = 5) {
       if (alertQueue.length === 0) return;
@@ -1077,11 +1078,26 @@
     }
 
     function renderAnki() {
-      document.getElementById('ankiCardsGrid').innerHTML = ankiCards.map(c => `
-        <div onclick="this.querySelector('.ans').classList.toggle('hidden')" class="glass-card rounded-xl p-3.5 border border-slate-800 cursor-pointer">
-          <div class="flex justify-between items-center mb-1"><span class="text-[10px] font-mono text-purple-300">#${c.tag}</span><button onclick="event.stopPropagation(); deleteAnkiCard('${c.id}')" class="text-xs text-rose-400">Sil</button></div>
-          <p class="text-xs sm:text-sm font-semibold text-white">${c.front}</p>
-          <div class="ans hidden mt-2 pt-2 border-t border-slate-800 text-xs text-emerald-300">💡 ${c.back}</div>
+      const grid = document.getElementById('ankiCardsGrid');
+      const badge = document.getElementById('ankiTotalBadge');
+      if (badge) badge.textContent = `${ankiCards.length} Kart`;
+
+      if (!ankiCards || ankiCards.length === 0) {
+        grid.innerHTML = `<div class="col-span-2 glass-card rounded-xl p-6 text-center text-xs text-slate-400">Henüz bilgi kartı eklenmemiş.</div>`;
+        return;
+      }
+
+      grid.innerHTML = ankiCards.map(c => `
+        <div onclick="const ans = this.querySelector('.ans'); if(ans) ans.classList.toggle('hidden');" class="glass-card rounded-2xl p-4 border border-slate-800 cursor-pointer hover:border-indigo-500/50 transition">
+          <div class="flex items-center justify-between mb-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/15 text-purple-300 border border-purple-500/30">#${c.tag || 'Genel'}</span>
+            <button onclick="event.stopPropagation(); deleteAnkiCard('${c.id}')" class="text-xs text-slate-500 hover:text-rose-400">Sil</button>
+          </div>
+          <p class="text-xs sm:text-sm font-semibold text-white"><strong>Soru:</strong> ${c.front}</p>
+          <div class="ans hidden mt-3 pt-2.5 border-t border-slate-800 text-xs text-emerald-300 font-medium">
+            💡 <strong>Cevap:</strong> ${c.back}
+          </div>
+          <p class="text-[10px] text-slate-500 mt-2 italic text-right">(Cevabı görmek için karta tıklayın)</p>
         </div>
       `).join('');
     }
